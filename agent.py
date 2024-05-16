@@ -4,8 +4,8 @@ from game import Board, UP, RIGHT, DOWN, LEFT, action_name
 from game import IllegalAction, GameOver
 from queue import Queue
 
-class nTupleNewrok:
-    def __init__(self, tuples):
+class nTupleNetwork:
+    def __init__(self, tuples, symmetric_sampling=True):
         self.TUPLES = tuples
         self.m = len(tuples)
         self.TARGET_PO2 = 15
@@ -14,12 +14,14 @@ class nTupleNewrok:
         self.LUTS = self.initialize_LUTS(self.TUPLES)
         self.E = np.zeros(self.m)
         self.A = np.zeros(self.m)
-
+        self.symmetric_sampling = symmetric_sampling
     def initialize_LUTS(self, tuples):
         LUTS = []
         for tp in tuples:
-            LUTS.append(np.zeros((self.TARGET_PO2 + 1) ** len(tp[0])))
-            # LUTS.append(np.zeros((self.TARGET_PO2 + 1) ** len(tp)))
+            if self.symmetric_sampling:
+                LUTS.append(np.zeros((self.TARGET_PO2 + 1) ** len(tp[0])))
+            else:
+                LUTS.append(np.zeros((self.TARGET_PO2 + 1) ** len(tp)))
         return LUTS
 
     def tuple_id(self, values):
@@ -42,25 +44,37 @@ class nTupleNewrok:
         if debug:
             print(f"V({board})")
         vals = []
-        for i, (tp, LUT) in enumerate(zip(self.TUPLES, self.LUTS)):
-            for tuple in tp:
-                tiles = [board[i] for i in tuple]
+        if self.symmetric_sampling:
+        
+            for i, (tp, LUT) in enumerate(zip(self.TUPLES, self.LUTS)):
+                for tuple in tp:
+                    tiles = [board[i] for i in tuple]
+                    tpid = self.tuple_id(tiles)
+                    if delta is not None:
+                        LUT[tpid] += delta
+                        
+                    v = LUT[tpid]
+                    if debug:
+                        print("board: ",board)
+                        print("tp: ",tp)
+                        print("tuple: ",tuple)
+                        print("tiles: ",tiles)
+                        print("tpid: ",tpid)
+                        print("LUT[tpid]: ",LUT[tpid])
+                        print(f"LUTS[{i}][{tiles}]={v}")
+                    vals.append(v)
+            return np.mean(vals)
+        else:
+            for i, (tp, LUT) in enumerate(zip(self.TUPLES, self.LUTS)):
+                tiles = [board[i] for i in tp]
                 tpid = self.tuple_id(tiles)
                 if delta is not None:
                     LUT[tpid] += delta
-                    
                 v = LUT[tpid]
                 if debug:
-                    print("board: ",board)
-                    print("tp: ",tp)
-                    print("tuple: ",tuple)
-                    print("tiles: ",tiles)
-                    print("tpid: ",tpid)
-                    print("LUT[tpid]: ",LUT[tpid])
                     print(f"LUTS[{i}][{tiles}]={v}")
                 vals.append(v)
-        return np.mean(vals)
-
+            return np.mean(vals)
     def evaluate(self, s, a):
         "Return expected total rewards of performing action (a) on the given board state (s)"
         b = Board(s)

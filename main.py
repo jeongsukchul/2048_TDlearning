@@ -1,7 +1,7 @@
 import numpy as np
 from game import Board
 from game import IllegalAction, GameOver
-from agent import nTupleNewrok
+from agent import nTupleNetwork
 import pickle
 import random
 from collections import namedtuple
@@ -22,7 +22,7 @@ Gameplay: A series of transitions on the board (transition_history). Also report
 Transition = namedtuple("Transition", "step, s, a, r, s_after, s_next")
 Gameplay = namedtuple("Gameplay", "transition_history game_reward max_tile, replay_buffer")
 
-def play(agent, board, replay_buffer, spawn_random_tile=False, alpha=0.1,beta=1.0,lambd=0.5,mode='TD0',buffer_size=100,model_learning_step=20):
+def play(agent, board, replay_buffer,spawn_random_tile=False, alpha=0.1,beta=1.0,lambd=0.5,mode='TD0',buffer_size=100,model_learning_step=20):
     "Return a gameplay of playing the given (board) until terminal states."
     b = Board(board)
     r_game = 0
@@ -96,25 +96,31 @@ def load_agent(path):
 # map board state to LUT
 TUPLES = [
     # # horizontal 4-tuples
-    # [0, 1, 2, 3],
-    # [4, 5, 6, 7],
-    # [8, 9, 10, 11],
-    # [12, 13, 14, 15],
-    # # vertical 4-tuples
-    # [0, 4, 8, 12],
-    # [1, 5, 9, 13],
-    # [2, 6, 10, 14],
-    # [3, 7, 11, 15],
-    # # all 4-tile squares
-    # [0, 1, 4, 5],
-    # [4, 5, 8, 9],
-    # [8, 9, 12, 13],
-    # [1, 2, 5, 6],
-    # [5, 6, 9, 10],
-    # [9, 10, 13, 14],
-    # [2, 3, 6, 7],
-    # [6, 7, 10, 11],
-    # [10, 11, 14, 15],
+    [0, 1, 2, 3],
+    [4, 5, 6, 7],
+    [8, 9, 10, 11],
+    [12, 13, 14, 15],
+    # vertical 4-tuples
+    [0, 4, 8, 12],
+    [1, 5, 9, 13],
+    [2, 6, 10, 14],
+    [3, 7, 11, 15],
+    # all 4-tile squares
+    [0, 1, 4, 5],
+    [4, 5, 8, 9],
+    [8, 9, 12, 13],
+    [1, 2, 5, 6],
+    [5, 6, 9, 10],
+    [9, 10, 13, 14],
+    [2, 3, 6, 7],
+    [6, 7, 10, 11],
+    [10, 11, 14, 15],
+    # [[0,1,2,3],[0,4,8,12],[3,7,11,15],[12,13,14,15]],
+    # [[4,5,6,7],[8,9,10,11],[1,5,9,13],[2,6,10,14]],
+    # [[0,1,2,4,5,6],[1,2,3,5,6,7],[8,9,10,12,13,14],[9,10,11,13,14,15],[0,1,4,5,8,9],[2,3,6,7,10,11],[4,5,8,9,12,13],[6,7,10,11,14,15]],
+    # [[4,5,6,8,9,10],[5,6,7,9,10,11],[1,2,5,6,9,10],[5,6,9,10,13,14]],
+]
+TUPLES_sym = [
     [[0,1,2,3],[0,4,8,12],[3,7,11,15],[12,13,14,15]],
     [[4,5,6,7],[8,9,10,11],[1,5,9,13],[2,6,10,14]],
     [[0,1,2,4,5,6],[1,2,3,5,6,7],[8,9,10,12,13,14],[9,10,11,13,14,15],[0,1,4,5,8,9],[2,3,6,7,10,11],[4,5,8,9,12,13],[6,7,10,11,14,15]],
@@ -159,6 +165,23 @@ if __name__ == "__main__":
     # prompt to load saved agents
     from pathlib import Path
 
+    
+    n_session = 5000
+    n_episode = 100
+    alpha = 0.1
+    beta = 1.0
+    lambd = 0.5
+    mode = 'TD0'
+    DynaQ = True
+    if DynaQ:
+        model_learning_step = 20
+        buffer_size=100
+
+    else:
+        model_learning_step = 0
+        buffer_size = 0
+    symmetric_sampling = False
+
     path = Path("tmp")
     saves = list(path.glob("*.pkl"))
     if len(saves) > 0:
@@ -175,22 +198,11 @@ if __name__ == "__main__":
     if agent is None:
         print("initialize agent")
         n_games = 0
-        agent = nTupleNewrok(TUPLES)
+        if symmetric_sampling:
+            agent = nTupleNetwork(TUPLES_sym, symmetric_sampling=True)
+        else:
+            agent = nTupleNetwork(TUPLES, symmetric_sampling=False)
 
-    n_session = 5000
-    n_episode = 100
-    alpha = 0.025
-    beta = 1.0
-    lambd = 0.5
-    mode = 'TD0'
-    DynaQ = True
-    if DynaQ:
-        model_learning_step = 20
-        buffer_size=100
-
-    else:
-        model_learning_step = 0
-        buffer_size = 0
     log = defaultdict(list)
     print("training")
     try:
@@ -224,6 +236,8 @@ if __name__ == "__main__":
             pickle.dump((n_games, agent), open(fout, "wb"))
             print("agent saved to", fout)
         mode_name = mode +"+alpha_"+str(alpha)
+        if symmetric_sampling:
+            mode_name = 'sym_'+mode_name
         if DynaQ:
             mode_name+='_dyanq_'+str(model_learning_step)
         if input("save history with csv file? (y/n)")=="y":
