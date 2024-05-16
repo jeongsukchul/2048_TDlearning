@@ -1,18 +1,25 @@
 import numpy as np
+import math
 from game import Board, UP, RIGHT, DOWN, LEFT, action_name
 from game import IllegalAction, GameOver
-
+from queue import Queue
 
 class nTupleNewrok:
     def __init__(self, tuples):
         self.TUPLES = tuples
+        self.m = len(tuples)
         self.TARGET_PO2 = 15
+        self.lambd = 0.5
+        self.h = 3
         self.LUTS = self.initialize_LUTS(self.TUPLES)
+        self.E = np.zeros(self.m)
+        self.A = np.zeros(self.m)
 
     def initialize_LUTS(self, tuples):
         LUTS = []
         for tp in tuples:
-            LUTS.append(np.zeros((self.TARGET_PO2 + 1) ** len(tp)))
+            LUTS.append(np.zeros((self.TARGET_PO2 + 1) ** len(tp[0])))
+            # LUTS.append(np.zeros((self.TARGET_PO2 + 1) ** len(tp)))
         return LUTS
 
     def tuple_id(self, values):
@@ -36,14 +43,22 @@ class nTupleNewrok:
             print(f"V({board})")
         vals = []
         for i, (tp, LUT) in enumerate(zip(self.TUPLES, self.LUTS)):
-            tiles = [board[i] for i in tp]
-            tpid = self.tuple_id(tiles)
-            if delta is not None:
-                LUT[tpid] += delta
-            v = LUT[tpid]
-            if debug:
-                print(f"LUTS[{i}][{tiles}]={v}")
-            vals.append(v)
+            for tuple in tp:
+                tiles = [board[i] for i in tuple]
+                tpid = self.tuple_id(tiles)
+                if delta is not None:
+                    LUT[tpid] += delta
+                    
+                v = LUT[tpid]
+                if debug:
+                    print("board: ",board)
+                    print("tp: ",tp)
+                    print("tuple: ",tuple)
+                    print("tiles: ",tiles)
+                    print("tpid: ",tpid)
+                    print("LUT[tpid]: ",LUT[tpid])
+                    print(f"LUTS[{i}][{tiles}]={v}")
+                vals.append(v)
         return np.mean(vals)
 
     def evaluate(self, s, a):
@@ -66,8 +81,44 @@ class nTupleNewrok:
                 r_best = r
                 a_best = a
         return a_best
+    
+    def TDupdate(self, history, current_step, delta, alpha=0.1,lambd=0.5):
+        T = min(self.h+1,current_step+1)
+        for i in range(T):
+            self.V(history[current_step-i].s_after,alpha/self.m*delta*(lambd**i))
 
-    def learn(self, s, a, r, s_after, s_next, alpha=0.01, debug=False):
+    def TCupdate(self, step, delta, beta=1,lambd=0.5):
+        T = min(self.h+1,step)
+        for i in range(T):
+            after_state = self.history[T-1-i]
+            self.actualTCupdate(delta,after_state, beta=beta, lambd=lambd)
+            # alpha = abs(self.E[after_state])/self.A[after_state]
+            # self.V(after_state,beta*alpha/self.m*delta*(lambd**i))
+            # self.E[after_state] += delta
+            # self.A[after_state] += abs(delta) 
+
+    def actualTCupdate(self, diff,after_state,beta=1.0,lambd=0.5):
+        alpha = abs(self.E[after_state])/self.A[after_state]
+        self.V(after_state,beta*alpha/self.m*diff)
+        self.E[after_state] += diff
+        self.A[after_state] += abs(diff)    
+
+    def delayedTCupdate(self, history, his_len, beta=1.0, lambd=0.5):
+        if his_len > self.h:
+            diff = 0
+            for i in range(self.h):
+                diff += history[-self.h-1].delta*(lambd**i)
+            self.actualTCupdate(diff, history[-1].s_after,beta=beta,lambd=lambd)
+
+    def final(self,history,his_len,beta=1.0,lambd=0.5):
+        for i in reversed(range(self.h)):
+            diff=0
+            for j in range(i):
+                diff+= history[-i+j]*(lambd**j)
+            self.actualTCupdate(diff, history[-i],diff)
+
+
+    def GetDelta(self, s_after, s_next, debug=False):
         """Learn from a transition experience by updating the belief
         on the after state (s_after) towards the sum of the next transition rewards (r_next) and
         the belief on the next after state (s_after_next).
@@ -84,7 +135,6 @@ class nTupleNewrok:
             v_after_next = 0
 
         delta = r_next + v_after_next - self.V(s_after)
-
         if debug:
             print("s_next")
             Board(s_next).display()
@@ -98,4 +148,21 @@ class nTupleNewrok:
             print(
                 f"V(s_after) <- V(s_after) ({V(s_after):.2f}) + alpha * delta ({alpha} * {delta:.1f})"
             )
-        self.V(s_after, alpha * delta)
+
+        return delta
+
+    def update(self,transition_history, delta, current_step, mode, alpha=0.1, beta=1.0, lambd=0.5):
+        if mode=='TD0':
+            self.V(transition_history[current_step].s_after, alpha*delta)
+        if mode=='TDlambda':
+            self.TDupdate(transition_history, current_step, delta,alpha=alpha,lambd=lambd)
+        if mode =='TClambda':
+            self.TCupdate(transition_history, current_step, delta,beta=beta,lambd=lambd)
+        if mode =='delayedTClambda':
+            self.delayedTCupdate(transition_history,current_step,beta=beta,lambd=lambd)
+    
+    def termination_update(self, transition_history, his_len, mode, alpha=0.1,beta=1.0,lambd=0.5):
+        if mode =='TDlambda' and his_len!=0:
+            self.TDupdate(transition_history,his_len,-self.V(transition_history[-1].s_after),alpha,lambd)
+        # if mode =='delayedTClambda' and his_len!=0:
+        #     self.final(transition_history,his_len,delta,beta,lambd)

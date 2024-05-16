@@ -69,6 +69,7 @@ class Board:
         empty_tiles = self.empty_tiles()
         if len(empty_tiles) == 0:
             raise GameOver("Board is full. Cannot spawn any tile.")
+            return -1
         if random_tile:
             k = 2 if np.random.rand() <= 0.1 else 1
             self.board[random.choice(empty_tiles)] = k
