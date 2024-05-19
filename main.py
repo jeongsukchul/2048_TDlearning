@@ -176,11 +176,11 @@ if __name__ == "__main__":
     if DynaQ:
         model_learning_step = 20
         buffer_size=100
-
     else:
         model_learning_step = 0
         buffer_size = 0
     symmetric_sampling = False
+    after_state=True 
 
     path = Path("tmp")
     saves = list(path.glob("*.pkl"))
@@ -199,9 +199,11 @@ if __name__ == "__main__":
         print("initialize agent")
         n_games = 0
         if symmetric_sampling:
-            agent = nTupleNetwork(TUPLES_sym, symmetric_sampling=True)
+            agent = nTupleNetwork(TUPLES_sym, symmetric_sampling=symmetric_sampling, after_state=after_state)
         else:
-            agent = nTupleNetwork(TUPLES, symmetric_sampling=False)
+            agent = nTupleNetwork(TUPLES, symmetric_sampling=symmetric_sampling, after_state=after_state)
+   
+
 
     log = defaultdict(list)
     print("training")
@@ -238,6 +240,8 @@ if __name__ == "__main__":
         mode_name = mode +"+alpha_"+str(alpha)
         if symmetric_sampling:
             mode_name = 'sym_'+mode_name
+        if ~after_state:
+            mode_name+='_no_after_state'
         if DynaQ:
             mode_name+='_dyanq_'+str(model_learning_step)
         if input("save history with csv file? (y/n)")=="y":

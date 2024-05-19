@@ -5,16 +5,18 @@ from game import IllegalAction, GameOver
 from queue import Queue
 
 class nTupleNetwork:
-    def __init__(self, tuples, symmetric_sampling=True):
+    def __init__(self, tuples, symmetric_sampling=True, after_state=True):
         self.TUPLES = tuples
         self.m = len(tuples)
         self.TARGET_PO2 = 15
         self.lambd = 0.5
         self.h = 3
+        self.symmetric_sampling = symmetric_sampling
+        self.after_state = after_state
         self.LUTS = self.initialize_LUTS(self.TUPLES)
         self.E = np.zeros(self.m)
         self.A = np.zeros(self.m)
-        self.symmetric_sampling = symmetric_sampling
+
     def initialize_LUTS(self, tuples):
         LUTS = []
         for tp in tuples:
@@ -45,7 +47,6 @@ class nTupleNetwork:
             print(f"V({board})")
         vals = []
         if self.symmetric_sampling:
-        
             for i, (tp, LUT) in enumerate(zip(self.TUPLES, self.LUTS)):
                 for tuple in tp:
                     tiles = [board[i] for i in tuple]
@@ -81,9 +82,16 @@ class nTupleNetwork:
         try:
             r = b.act(a)
             s_after = b.copyboard()
-        except IllegalAction:
+            if ~(self.after_state):
+                b.spawn_tile(random_tile=True)
+                s_next = b.copyboard()
+        except(IllegalAction, GameOver) as e:
             return 0
-        return r + self.V(s_after)
+        if self.after_state:
+            return r + self.V(s_after)
+        else:
+            return r + self.V(s_next)
+    
 
     def best_action(self, s):
         "returns the action with the highest expected total rewards on the state (s)"
@@ -143,12 +151,24 @@ class nTupleNetwork:
         try:
             r_next = b.act(a_next)
             s_after_next = b.copyboard()
-            v_after_next = self.V(s_after_next)
-        except IllegalAction:
-            r_next = 0
-            v_after_next = 0
+            if self.after_state:
+                v_after_next = self.V(s_after_next)
+            else:
+                b.spawn_tile(random_tile=True)
+                s_next_next = b.copyboard()
+                v_next_next = self.V(s_next_next)
 
-        delta = r_next + v_after_next - self.V(s_after)
+        except (IllegalAction, GameOver) as e:
+            r_next = 0
+            if self.after_state:
+                v_after_next = 0
+            else:
+                v_next_next = 0
+        if self.after_state:
+            delta = r_next + v_after_next - self.V(s_after)
+        else:
+            delta = r_next + v_next_next - self.V(s_next)
+
         if debug:
             print("s_next")
             Board(s_next).display()
@@ -167,7 +187,11 @@ class nTupleNetwork:
 
     def update(self,transition_history, delta, current_step, mode, alpha=0.1, beta=1.0, lambd=0.5):
         if mode=='TD0':
-            self.V(transition_history[current_step].s_after, alpha*delta)
+            if self.after_state:
+                self.V(transition_history[current_step].s_after, alpha*delta)
+            else:
+                self.V(transition_history[current_step].s_next, alpha*delta)
+
         if mode=='TDlambda':
             self.TDupdate(transition_history, current_step, delta,alpha=alpha,lambd=lambd)
         if mode =='TClambda':
