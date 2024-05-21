@@ -14,7 +14,7 @@ class ActorCritic(nn.Module):
                         num_actions,
                         actor_hidden_dims=[256, 256, 256],
                         critic_hidden_dims=[256, 256, 256],
-                        activation='elu',
+                        activation='softmax',
                         init_noise_std=1.0,
                         **kwargs):
         if kwargs:

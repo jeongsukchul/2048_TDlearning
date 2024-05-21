@@ -214,6 +214,7 @@ class PolicyGradient:
     def __init__(self,
                  tuples,
                  actor_critic,
+                 agent='ActorCritic',
                  symmetric_sampling=True, 
                  after_state=True,
                  num_learning_epochs=1,
@@ -235,6 +236,7 @@ class PolicyGradient:
         self.TARGET_PO2 = 15
         self.lambd = 0.5
         self.h = 3
+        self.agent = agent
         self.symmetric_sampling = symmetric_sampling
         self.after_state = after_state
         self.LUTS = self.initialize_LUTS(self.TUPLES)
