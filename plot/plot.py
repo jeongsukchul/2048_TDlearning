@@ -1,11 +1,10 @@
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
-def plot_pandas(csv_file1,csv_file2, save_path, result_name,interval):
+def plot_pandas(csv_file1,csv_file2, save_path,interval):
     # Read the CSV file into a pandas DataFrame
     df1 = pd.read_csv(csv_file1)
     df2 = pd.read_csv(csv_file2)
-    expected_columns = ['games', result_name]
     # if not all(col in df.columns for col in expected_columns):
     #     raise ValueError("Error: Column names in CSV file do not match expected names.")
     # Extract 'episode' and 'return' columns
@@ -21,7 +20,7 @@ def plot_pandas(csv_file1,csv_file2, save_path, result_name,interval):
     plt.xlabel('Games')
     plt.ylabel('Mean Rewards')
     plt.legend()
-    plt.title('TD(0)')
+    plt.title('TD(0) learning with different approach')
     plt.grid(True)
     
     plt.show
@@ -34,4 +33,4 @@ if __name__ == '__main__':
     csv_path1=  os.path.join(SAVE_PATH,'reward_base.csv')
     csv_path2=  os.path.join(SAVE_PATH,'reward_imp.csv')
 
-    plot_pandas(csv_path1, csv_path2, 'reward.png','teacher',1)
+    plot_pandas(csv_path1, csv_path2, 'reward.png',1)
