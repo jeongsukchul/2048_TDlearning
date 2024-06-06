@@ -127,7 +127,7 @@ TUPLES_sym = [
     [[4,5,6,8,9,10],[5,6,7,9,10,11],[1,2,5,6,9,10],[5,6,9,10,13,14]],
 ]
 
-def plot(log,mode_name):
+def plot(log,mode_name,path):
     nb_rows = 2
     nb_cols = 2
     fig, axs = plt.subplots(nb_rows, nb_cols)
@@ -149,7 +149,11 @@ def plot(log,mode_name):
     a.plot(games, log["maxtile"])
     a.set(xlabel='games', ylabel='maximum tile', title='Maximum Tile')
     plt.suptitle(mode_name, fontsize=20)
+    PNG_PATH = os.path.join(SAVE_PATH, 'plot.png')
+    plt.savefig(PNG_PATH)
     plt.show()
+
+
 
 def append_to_csv(file_path, games, result_name, return_value, isfirstappend = False):
     # Create a DataFrame with the new data
@@ -172,7 +176,7 @@ if __name__ == "__main__":
     beta = 1.0
     lambd = 0.5
     mode = 'TD0'
-    DynaQ = True
+    DynaQ = False
     if DynaQ:
         model_learning_step = 20
         buffer_size=100
@@ -180,7 +184,7 @@ if __name__ == "__main__":
         model_learning_step = 0
         buffer_size = 0
     symmetric_sampling = False
-    after_state=True 
+    after_state=False 
 
     path = Path("tmp")
     saves = list(path.glob("*.pkl"))
@@ -199,9 +203,9 @@ if __name__ == "__main__":
         print("initialize agent")
         n_games = 0
         if symmetric_sampling:
-            agent = nTupleNetwork(TUPLES_sym, symmetric_sampling=symmetric_sampling, after_state=after_state)
+            agent = nTupleNetwork(TUPLES_sym, symmetric_sampling=symmetric_sampling, after_state=after_state,lambd=lambd)
         else:
-            agent = nTupleNetwork(TUPLES, symmetric_sampling=symmetric_sampling, after_state=after_state)
+            agent = nTupleNetwork(TUPLES, symmetric_sampling=symmetric_sampling, after_state=after_state, lambd=lambd)
    
 
 
@@ -232,34 +236,64 @@ if __name__ == "__main__":
             log["maxtile"].append(maxtile)
     except KeyboardInterrupt:
         print("training interrupted")
-        print("{} games played by the agent".format(n_games))
-        if input("save the agent? (y/n)") == "y":
-            fout = "tmp/{}_{}games.pkl".format(agent.__class__.__name__, n_games)
-            pickle.dump((n_games, agent), open(fout, "wb"))
-            print("agent saved to", fout)
-        mode_name = mode +"+alpha_"+str(alpha)
-        if symmetric_sampling:
-            mode_name = 'sym_'+mode_name
-        if ~after_state:
-            mode_name+='_no_after_state'
-        if DynaQ:
-            mode_name+='_dyanq_'+str(model_learning_step)
-        if input("save history with csv file? (y/n)")=="y":
-            for key, value in log.items():
-                games = np.linspace(0, len(value)*100, len(value))
-            SAVE_PATH = os.path.abspath(os.path.dirname(__file__))
+        # print("{} games played by the agent".format(n_games))
+        # if input("save the agent? (y/n)") == "y":
+        #     fout = "tmp/{}_{}games.pkl".format(agent.__class__.__name__, n_games)
+        #     pickle.dump((n_games, agent), open(fout, "wb"))
+        #     print("agent saved to", fout)
+        # mode_name = mode +"+alpha_"+str(alpha)
+        # if symmetric_sampling:
+        #     mode_name = 'sym_'+mode_name
+        # if ~after_state:
+        #     mode_name+='_no_after_state'
+        # if DynaQ:
+        #     mode_name+='_dyanq_'+str(model_learning_step)
+        # if input("save history with csv file? (y/n)")=="y":
+        #     for key, value in log.items():
+        #         games = np.linspace(0, len(value)*100, len(value))
+        #     SAVE_PATH = os.path.abspath(os.path.dirname(__file__))
 
-            SAVE_PATH = os.path.join(SAVE_PATH, mode_name)
-            if not os.path.exists(SAVE_PATH):
-                os.makedirs(SAVE_PATH)
-            CSV_PATH = os.path.join(SAVE_PATH, 'reward.csv')
-            append_to_csv(CSV_PATH, games=list(games), return_value=list(log["reward"]), result_name='Mean reward', isfirstappend=True)
-            CSV_PATH = os.path.join(SAVE_PATH, 'mean_max_tile.csv')
-            append_to_csv(CSV_PATH, games=list(games), return_value=list(log["mean_max_tile"]), result_name='Mean Max Tile', isfirstappend=True)
-            CSV_PATH = os.path.join(SAVE_PATH, '2048_rate.csv')
-            append_to_csv(CSV_PATH, games=list(games), return_value=list(log["2048_rate"]), result_name='2048 rate', isfirstappend=True)
-            CSV_PATH = os.path.join(SAVE_PATH, 'max_tile.csv')
-            append_to_csv(CSV_PATH, games=list(games), return_value=list(log["maxtile"]), result_name='Max Tile', isfirstappend=True)
-        if input("plot log (y/n)")=="y":
-            plot(log,mode_name)
+        #     SAVE_PATH = os.path.join(SAVE_PATH, mode_name)
+        #     if not os.path.exists(SAVE_PATH):
+        #         os.makedirs(SAVE_PATH)
+        #     CSV_PATH = os.path.join(SAVE_PATH, 'reward.csv')
+        #     append_to_csv(CSV_PATH, games=list(games), return_value=list(log["reward"]), result_name='Mean reward', isfirstappend=True)
+        #     CSV_PATH = os.path.join(SAVE_PATH, 'mean_max_tile.csv')
+        #     append_to_csv(CSV_PATH, games=list(games), return_value=list(log["mean_max_tile"]), result_name='Mean Max Tile', isfirstappend=True)
+        #     CSV_PATH = os.path.join(SAVE_PATH, '2048_rate.csv')
+        #     append_to_csv(CSV_PATH, games=list(games), return_value=list(log["2048_rate"]), result_name='2048 rate', isfirstappend=True)
+        #     CSV_PATH = os.path.join(SAVE_PATH, 'max_tile.csv')
+        #     append_to_csv(CSV_PATH, games=list(games), return_value=list(log["maxtile"]), result_name='Max Tile', isfirstappend=True)
+        # if input("plot log (y/n)")=="y":
+        #     plot(log,mode_name)
+mode_name = mode +"+alpha_"+str(alpha)
+if symmetric_sampling:
+    mode_name = 'sym_'+mode_name
+if ~after_state:
+    mode_name+='_no_after_state'
+if DynaQ:
+    mode_name+='_dyanq_'+str(model_learning_step)
+for key, value in log.items():
+    games = np.linspace(0, len(value)*100, len(value))
+
+SAVE_PATH = os.path.abspath(os.path.dirname(__file__))
+SAVE_PATH = os.path.join(SAVE_PATH, mode_name)
+if not os.path.exists(SAVE_PATH):
+    os.makedirs(SAVE_PATH)
+
+
+MODEL_PATH = os.path.join(SAVE_PATH,mode_name+'.pkl')
+pickle.dump(agent, open(MODEL_PATH, "wb"), protocol=pickle.HIGHEST_PROTOCOL)
+print("agent saved to", MODEL_PATH)
+
+
+CSV_PATH = os.path.join(SAVE_PATH, 'reward.csv')
+append_to_csv(CSV_PATH, games=list(games), return_value=list(log["reward"]), result_name='Mean reward', isfirstappend=True)
+CSV_PATH = os.path.join(SAVE_PATH, 'mean_max_tile.csv')
+append_to_csv(CSV_PATH, games=list(games), return_value=list(log["mean_max_tile"]), result_name='Mean Max Tile', isfirstappend=True)
+CSV_PATH = os.path.join(SAVE_PATH, '2048_rate.csv')
+append_to_csv(CSV_PATH, games=list(games), return_value=list(log["2048_rate"]), result_name='2048 rate', isfirstappend=True)
+CSV_PATH = os.path.join(SAVE_PATH, 'max_tile.csv')
+append_to_csv(CSV_PATH, games=list(games), return_value=list(log["maxtile"]), result_name='Max Tile', isfirstappend=True)
+plot(log,mode_name,SAVE_PATH)
 

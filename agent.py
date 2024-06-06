@@ -5,12 +5,12 @@ from game import IllegalAction, GameOver
 from queue import Queue
 
 class nTupleNetwork:
-    def __init__(self, tuples, symmetric_sampling=True, after_state=True):
+    def __init__(self, tuples, symmetric_sampling=True, after_state=True, lambd= 0.5):
         self.TUPLES = tuples
         self.m = len(tuples)
         self.TARGET_PO2 = 15
-        self.lambd = 0.5
-        self.h = 3
+        self.lambd = 0.1
+        self.h = int(-1/math.log(lambd,10))
         self.symmetric_sampling = symmetric_sampling
         self.after_state = after_state
         self.LUTS = self.initialize_LUTS(self.TUPLES)
