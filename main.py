@@ -175,7 +175,7 @@ if __name__ == "__main__":
     alpha = 0.1
     beta = 1.0
     lambd = 0.5
-    mode = 'TD0'
+    mode = 'TDlambda'
     DynaQ = False
     if DynaQ:
         model_learning_step = 20
@@ -183,8 +183,8 @@ if __name__ == "__main__":
     else:
         model_learning_step = 0
         buffer_size = 0
-    symmetric_sampling = False
-    after_state=False 
+    symmetric_sampling = True
+    after_state=True 
 
     path = Path("tmp")
     saves = list(path.glob("*.pkl"))
@@ -269,7 +269,7 @@ if __name__ == "__main__":
 mode_name = mode +"+alpha_"+str(alpha)
 if symmetric_sampling:
     mode_name = 'sym_'+mode_name
-if ~after_state:
+if not after_state:
     mode_name+='_no_after_state'
 if DynaQ:
     mode_name+='_dyanq_'+str(model_learning_step)
