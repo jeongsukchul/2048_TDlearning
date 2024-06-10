@@ -10,6 +10,12 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import pandas as pd
 import os 
+import random
+from typing import Union
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
+
 """
 Vocabulary
 --------------
@@ -25,11 +31,13 @@ Gameplay = namedtuple("Gameplay", "transition_history game_reward max_tile, repl
 def play(agent, board, replay_buffer,spawn_random_tile=False, alpha=0.1,beta=1.0,lambd=0.5,mode='TD0',buffer_size=100,model_learning_step=20):
     "Return a gameplay of playing the given (board) until terminal states."
     b = Board(board)
+    print("board", b.board)
     r_game = 0
     transition_history = []
     step = 0
     while True:
         a_best = agent.best_action(b.board)
+        print(b.board)
         s = b.copyboard()
         # print("state s : ",s)
         s_after = None

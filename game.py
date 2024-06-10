@@ -12,7 +12,7 @@ def action_name(a):
 
 
 class IllegalAction(Exception):
-    pass
+    print("illegal")
 
 
 class GameOver(Exception):
